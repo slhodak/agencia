@@ -66,48 +66,51 @@ class Agent:
                 # Initialize parser for this stream
                 parser = StreamingUtensilParser()
 
-                # Process tokens as they arrive
+                # Process all tokens - no early break, collect all utensil calls
                 for token in stream.text_stream:
                     parser.add_token(token)
-
-                    # Check if we have a complete utensil call mid-stream
-                    if parser.has_utensil_call():
-                        break
 
             # Finalize parser to process any remaining tokens (handles END_UTENSIL without trailing newline)
             parser.finalize()
 
-            # Check if there's a utensil call to execute (detected mid-stream or after finalize)
+            # Check if there are utensil calls to execute
             if parser.has_utensil_call():
-                logger.debug("Utensil detected!")
-                # Extract the utensil call
-                utensil_call = parser.get_utensil_call()
-                utensil_name = utensil_call["name"]
-                utensil_params = utensil_call["params"]
-                utensil_text = utensil_call["text"]
+                utensil_calls = parser.get_all_utensil_calls()
+                logger.debug(f"Detected {len(utensil_calls)} utensil call(s)")
 
-                print(f"Utensil Call: {utensil_name}")
-                print(f"Parameters: {utensil_params}")
-
-                # Execute the utensil
-                result = execute_utensil(utensil_name, utensil_params)
-
-                # Add assistant message with the utensil call to history
+                # Build the full assistant response (text + all utensil calls)
                 assistant_text = parser.get_text()
-                if assistant_text:
-                    full_response = assistant_text + "\n\n" + utensil_text
-                else:
-                    full_response = utensil_text
+                utensil_texts = [call["text"] for call in utensil_calls]
 
+                if assistant_text:
+                    full_response = assistant_text + "\n\n" + "\n\n".join(utensil_texts)
+                else:
+                    full_response = "\n\n".join(utensil_texts)
+
+                # Add assistant message with all utensil calls to history
                 self.message_history.append({
                     "role": "assistant",
                     "content": full_response
                 })
 
-                # Add user message with the result
+                # Execute utensils sequentially and collect results
+                results = []
+                for utensil_call in utensil_calls:
+                    utensil_name = utensil_call["name"]
+                    utensil_params = utensil_call["params"]
+
+                    print(f"Utensil Call: {utensil_name}")
+                    print(f"Parameters: {utensil_params}")
+
+                    # Execute the utensil
+                    result = execute_utensil(utensil_name, utensil_params)
+                    results.append(f"[Result of {utensil_name}]\n{result}")
+
+                # Add combined results as user message
+                combined_results = "\n\n".join(results)
                 self.message_history.append({
                     "role": "user",
-                    "content": result
+                    "content": combined_results
                 })
 
                 # Continue the agentic loop

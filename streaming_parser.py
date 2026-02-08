@@ -54,6 +54,8 @@ class StreamingUtensilParser:
         # For multi-line value accumulation
         self.multiline_key = None
         self.multiline_lines = []
+        # Queue for multiple utensil calls in one response
+        self.utensil_queue = []
 
     def add_token(self, token: str):
         """
@@ -115,8 +117,18 @@ class StreamingUtensilParser:
 
             # Check for end marker
             elif line == "END_UTENSIL":
-                self.state = ParserState.COMPLETE
-                logger.debug("Transitioned to COMPLETE state")
+                # Queue the completed utensil and reset to continue parsing
+                self.utensil_queue.append({
+                    "name": self.utensil_name,
+                    "params": self.utensil_params,
+                    "text": self.utensil_text.strip()
+                })
+                logger.debug(f"Queued utensil: {self.utensil_name}")
+                # Reset for next utensil
+                self.state = ParserState.NORMAL
+                self.utensil_name = None
+                self.utensil_params = {}
+                self.utensil_text = ""
 
             # Any other line in utensil context is ignored (or could be an error)
 
@@ -137,38 +149,43 @@ class StreamingUtensilParser:
 
     def has_utensil_call(self) -> bool:
         """
-        Check if a complete utensil call has been parsed.
+        Check if any complete utensil calls have been parsed.
 
         Returns:
-            True if a complete utensil is ready to execute
+            True if at least one utensil is ready to execute
         """
-        return self.state == ParserState.COMPLETE
+        return len(self.utensil_queue) > 0
 
     def get_utensil_call(self) -> Optional[dict]:
         """
-        Extract the complete utensil call and reset state for next call.
+        Extract the next utensil call from the queue.
 
         Returns:
-            Dictionary with 'name', 'params', and 'text' keys, or None if no complete call
+            Dictionary with 'name', 'params', and 'text' keys, or None if queue is empty
         """
         if not self.has_utensil_call():
             return None
+        return self.utensil_queue.pop(0)
 
-        result = {
-            "name": self.utensil_name,
-            "params": self.utensil_params,
-            "text": self.utensil_text.strip()
-        }
+    def get_all_utensil_calls(self) -> list:
+        """
+        Extract all queued utensil calls and clear the queue.
 
-        # Reset utensil-specific state to parse next call
-        self.state = ParserState.NORMAL
-        self.utensil_name = None
-        self.utensil_params = {}
-        self.utensil_text = ""
-        self.multiline_key = None
-        self.multiline_lines = []
+        Returns:
+            List of dictionaries, each with 'name', 'params', and 'text' keys
+        """
+        calls = self.utensil_queue.copy()
+        self.utensil_queue = []
+        return calls
 
-        return result
+    def utensil_count(self) -> int:
+        """
+        Get the number of utensil calls in the queue.
+
+        Returns:
+            Number of queued utensil calls
+        """
+        return len(self.utensil_queue)
 
     def get_text(self) -> str:
         """

@@ -128,7 +128,7 @@ Please respond with ONLY the summary, no preamble or explanation."""
         Returns:
             True if successful
         """
-        self.agent.message_history = []
+        self.agent.reset()
         print("\n✅ Conversation history cleared. Starting fresh!\n")
         return True
 

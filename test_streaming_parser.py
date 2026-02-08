@@ -140,6 +140,109 @@ def test_text_with_utensil_keyword():
     print("✓ test_text_with_utensil_keyword passed")
 
 
+def test_multiple_utensil_calls_in_one_response():
+    """Test parsing multiple utensil calls in a single response."""
+    parser = StreamingUtensilParser()
+
+    tokens = """I'll read both files for you.
+
+UTENSIL:read_file
+PARAM:file_path=file1.txt
+END_UTENSIL
+
+Now let me read the second one.
+
+UTENSIL:read_file
+PARAM:file_path=file2.txt
+END_UTENSIL
+
+And now I'll write a summary.
+
+UTENSIL:write_file
+PARAM:file_path=summary.txt
+PARAM:content=Summary here
+END_UTENSIL
+"""
+    for token in tokens:
+        parser.add_token(token)
+
+    assert parser.utensil_count() == 3, f"Should have 3 utensil calls, got {parser.utensil_count()}"
+
+    calls = parser.get_all_utensil_calls()
+    assert len(calls) == 3
+    assert calls[0]["name"] == "read_file"
+    assert calls[0]["params"]["file_path"] == "file1.txt"
+    assert calls[1]["name"] == "read_file"
+    assert calls[1]["params"]["file_path"] == "file2.txt"
+    assert calls[2]["name"] == "write_file"
+    assert calls[2]["params"]["file_path"] == "summary.txt"
+
+    # Queue should be empty after get_all_utensil_calls
+    assert parser.utensil_count() == 0
+    print("✓ test_multiple_utensil_calls_in_one_response passed")
+
+
+def test_text_between_and_after_utensils():
+    """Test that text between and after utensil calls is captured."""
+    parser = StreamingUtensilParser()
+
+    tokens = """First I'll read the file.
+
+UTENSIL:read_file
+PARAM:file_path=test.txt
+END_UTENSIL
+
+Now based on the contents, let me update it.
+
+UTENSIL:write_file
+PARAM:file_path=test.txt
+PARAM:content=Updated
+END_UTENSIL
+
+All done! The file has been updated successfully.
+"""
+    for token in tokens:
+        parser.add_token(token)
+
+    assert parser.utensil_count() == 2
+
+    text = parser.get_text()
+    assert "First I'll read the file." in text
+    assert "Now based on the contents" in text
+    assert "All done!" in text
+    print("✓ test_text_between_and_after_utensils passed")
+
+
+def test_get_utensil_call_pops_from_queue():
+    """Test that get_utensil_call returns calls one at a time."""
+    parser = StreamingUtensilParser()
+
+    tokens = """UTENSIL:read_file
+PARAM:file_path=a.txt
+END_UTENSIL
+
+UTENSIL:read_file
+PARAM:file_path=b.txt
+END_UTENSIL
+"""
+    for token in tokens:
+        parser.add_token(token)
+
+    assert parser.utensil_count() == 2
+
+    call1 = parser.get_utensil_call()
+    assert call1["params"]["file_path"] == "a.txt"
+    assert parser.utensil_count() == 1
+
+    call2 = parser.get_utensil_call()
+    assert call2["params"]["file_path"] == "b.txt"
+    assert parser.utensil_count() == 0
+
+    call3 = parser.get_utensil_call()
+    assert call3 is None
+    print("✓ test_get_utensil_call_pops_from_queue passed")
+
+
 if __name__ == "__main__":
     print("Running streaming parser tests...\n")
 
@@ -151,5 +254,8 @@ if __name__ == "__main__":
     test_token_by_token_streaming()
     test_incomplete_utensil()
     test_text_with_utensil_keyword()
+    test_multiple_utensil_calls_in_one_response()
+    test_text_between_and_after_utensils()
+    test_get_utensil_call_pops_from_queue()
 
     print("\n✅ All tests passed!")
