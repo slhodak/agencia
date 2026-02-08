@@ -1,4 +1,9 @@
-# Python Coding Agent with Interactive REPL
+# Agent with Interactive REPL
+
+Hi, human author here. This is a learning project to get familiar with agents from the inside. It implements a custom tooling framework ("utensils"), and uses a custom streaming parser to detect and execute utensil calls, while explicitly instructing Claude not to use its own native tool call format.
+
+Now back to our ai-generated introduction...
+
 
 An intelligent agent powered by Claude that can read files, write files, and execute commands through an interactive REPL interface.
 
@@ -204,13 +209,6 @@ Potential features for future versions:
 - Token usage tracking
 - Colored output
 
-## License
-
-[Your license here]
-
-## Contributing
-
-[Your contribution guidelines here]
 
 ---
 
