@@ -142,9 +142,8 @@ Agent> check the git status
 
 - **main.py**: Entry point with REPL loop
 - **agent.py**: Core agent logic with Claude API integration
-- **utensils.py**: Custom tool definitions and execution
+- **utensils.py**: Custom tool definitions, implementations, and execution
 - **streaming_parser.py**: Real-time parsing of tool calls from streaming responses
-- **tools.py**: Implementation of file and command tools
 
 ### How It Works
 
