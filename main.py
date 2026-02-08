@@ -21,11 +21,6 @@ def main():
             help="The task for the agent to perform"
         )
         parser.add_argument(
-            "--utensils",
-            action="store_true",
-            help="Use custom utensils format instead of Anthropic's built-in tools"
-        )
-        parser.add_argument(
             "--debug",
             action="store_true",
             help="Enable debug logging"
@@ -41,11 +36,9 @@ def main():
                     handler.setLevel(logging.DEBUG)
 
         # Initialize and run the agent with the provided task
+        # Always use utensils by default
         agent = Agent()
-        if args.utensils:
-            agent.run_with_utensils(args.task)
-        else:
-            agent.run(args.task)
+        agent.run_with_utensils(args.task)
     except Exception as e:
         print(f"unknown error when calling api: {e}")
 
