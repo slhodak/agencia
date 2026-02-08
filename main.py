@@ -5,6 +5,7 @@ import argparse
 import logging
 from dotenv import load_dotenv
 from agent import Agent
+from commands import CommandHandler
 
 # Import readline for better input handling with word navigation support
 try:
@@ -39,6 +40,9 @@ def run_repl(debug=False):
     # Initialize agent once for the entire session
     agent = Agent()
     
+    # Initialize command handler
+    command_handler = CommandHandler(agent)
+    
     # Display welcome message
     print("\n" + "="*60)
     print("🤖 Agent REPL - Interactive Mode")
@@ -46,6 +50,7 @@ def run_repl(debug=False):
     print("Enter your tasks and I'll help you complete them.")
     print("Type 'exit', 'quit', or press Ctrl+D to exit.")
     print("Press Ctrl+C to interrupt a running task.")
+    print("Type /help for available commands.")
     print("="*60 + "\n")
 
     # REPL loop
@@ -62,6 +67,11 @@ def run_repl(debug=False):
             if user_input.lower() in ['exit', 'quit']:
                 print("\n👋 Goodbye!\n")
                 break
+            
+            # Check if input is a command
+            if command_handler.is_command(user_input):
+                command_handler.execute_command(user_input)
+                continue
             
             # Process the task through the agent
             try:
