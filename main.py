@@ -6,6 +6,23 @@ import logging
 from dotenv import load_dotenv
 from agent import Agent
 
+# Import readline for better input handling with word navigation support
+try:
+    import readline
+    # Enable tab completion and history
+    readline.parse_and_bind('tab: complete')
+    # Set up word navigation with Alt+Arrow keys (Meta keys)
+    readline.parse_and_bind('"\e[1;3C": forward-word')  # Alt+Right
+    readline.parse_and_bind('"\e[1;3D": backward-word')  # Alt+Left
+    # Also support some common alternative sequences
+    readline.parse_and_bind('"\e\e[C": forward-word')  # Alt+Right (alternative)
+    readline.parse_and_bind('"\e\e[D": backward-word')  # Alt+Left (alternative)
+    readline.parse_and_bind('"\ef": forward-word')  # Alt+f
+    readline.parse_and_bind('"\eb": backward-word')  # Alt+b
+except ImportError:
+    # readline not available (e.g., on Windows)
+    pass
+
 # Load environment variables from .env file
 load_dotenv()
 
