@@ -28,14 +28,27 @@ PARAM:param1=value1
 PARAM:param2=value2
 END_UTENSIL
 
+For multi-line values (like file content), use BEGIN_VALUE and END_VALUE:
+UTENSIL:write_file
+PARAM:file_path=example.py
+PARAM:content=BEGIN_VALUE
+def hello():
+    print("Hello, world!")
+
+if __name__ == "__main__":
+    hello()
+END_VALUE
+END_UTENSIL
+
 Available utensils:
 - read_file: Read file contents. Parameters: file_path
-- write_file: Write to a file. Parameters: file_path, content
+- write_file: Write to a file. Parameters: file_path, content (use BEGIN_VALUE/END_VALUE for multi-line content)
 - execute_command: Run a bash command. Parameters: command
 
 IMPORTANT: Do NOT use Anthropic's tool use format. Use ONLY the format shown above.
+IMPORTANT: For write_file with multi-line content, you MUST use BEGIN_VALUE and END_VALUE.
 
-Example:
+Example - reading a file:
 User asks: "read the file test.txt"
 You respond:
 I'll read that file for you.
@@ -44,7 +57,22 @@ UTENSIL:read_file
 PARAM:file_path=test.txt
 END_UTENSIL
 
-Then you'll receive the file contents and can respond with analysis."""
+Example - writing a file:
+User asks: "create a file called greeting.py with a function that prints hello"
+You respond:
+I'll create that file for you.
+
+UTENSIL:write_file
+PARAM:file_path=greeting.py
+PARAM:content=BEGIN_VALUE
+def greet():
+    print("Hello!")
+
+greet()
+END_VALUE
+END_UTENSIL
+
+Then you'll receive the result and can respond with confirmation or analysis."""
 
 
 def execute_utensil(name: str, params: dict) -> str:

@@ -1,10 +1,22 @@
 """Main agent loop with Claude API integration."""
 
+import logging
 import os
 from anthropic import Anthropic
 from tools import TOOLS, execute_tool
 from utensils import get_utensils_system_prompt, execute_utensil
 from streaming_parser import StreamingUtensilParser
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 class Agent:
@@ -152,7 +164,7 @@ class Agent:
 
             # Check if there's a utensil call to execute (detected mid-stream or after finalize)
             if parser.has_utensil_call():
-                print("\n[DEBUG] Utensil detected!")
+                logger.debug("Utensil detected!")
                 # Extract the utensil call
                 utensil_call = parser.get_utensil_call()
                 utensil_name = utensil_call["name"]

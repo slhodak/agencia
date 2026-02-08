@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import logging
 from dotenv import load_dotenv
 from agent import Agent
 
@@ -24,8 +25,20 @@ def main():
             action="store_true",
             help="Use custom utensils format instead of Anthropic's built-in tools"
         )
+        parser.add_argument(
+            "--debug",
+            action="store_true",
+            help="Enable debug logging"
+        )
 
         args = parser.parse_args()
+
+        # Set log level to DEBUG if --debug flag is passed
+        if args.debug:
+            for name in ["agent", "streaming_parser"]:
+                logger = logging.getLogger(name)
+                for handler in logger.handlers:
+                    handler.setLevel(logging.DEBUG)
 
         # Initialize and run the agent with the provided task
         agent = Agent()

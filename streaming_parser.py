@@ -1,13 +1,27 @@
 """Streaming parser for utensil calls in Claude's token stream."""
 
+import logging
 from enum import Enum
 from typing import Optional
+
+# Configure logger for this module
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)  # Allow all levels, let handler decide
+
+# Only add handler if none exist (avoid duplicate handlers on reimport)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)  # Default to INFO level
+    formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 class ParserState(Enum):
     """States for the utensil call parser state machine."""
     NORMAL = "normal"  # Accumulating regular text
     IN_UTENSIL = "in_utensil"  # Inside a utensil call, accumulating parameters
+    IN_MULTILINE_VALUE = "in_multiline_value"  # Accumulating multi-line parameter value
     COMPLETE = "complete"  # A complete utensil call has been parsed
 
 
@@ -18,8 +32,14 @@ class StreamingUtensilParser:
     This parser detects utensil calls in the format:
     UTENSIL:utensil_name
     PARAM:param1=value1
-    PARAM:param2=value2
+    PARAM:param2=BEGIN_VALUE
+    line 1
+    line 2
+    END_VALUE
     END_UTENSIL
+
+    Single-line parameters use: PARAM:key=value
+    Multi-line parameters use: PARAM:key=BEGIN_VALUE ... END_VALUE
     """
 
     def __init__(self):
@@ -29,7 +49,11 @@ class StreamingUtensilParser:
         self.token_buffer = ""  # Accumulates tokens to form complete lines
         self.utensil_name = None
         self.utensil_params = {}
-        self.utensil_text = ""  # The raw text of the utensil call (for message history)
+        # The raw text of the utensil call (for message history)
+        self.utensil_text = ""
+        # For multi-line value accumulation
+        self.multiline_key = None
+        self.multiline_lines = []
 
     def add_token(self, token: str):
         """
@@ -50,10 +74,12 @@ class StreamingUtensilParser:
         Process a complete line and update state accordingly.
 
         Args:
-            line: A complete line of text
+            line: A complete line of text (note: we preserve original for multi-line values)
         """
+        # For multi-line values, we need to preserve the original line (with whitespace)
+        original_line = line
         line = line.strip()
-        print(f"\n[PARSER] Processing line: {repr(line)}, State: {self.state}")  # Debug
+        logger.debug(f"Processing line: {repr(line)}, State: {self.state}")
 
         if self.state == ParserState.NORMAL:
             # Check if this line starts a utensil call
@@ -75,14 +101,39 @@ class StreamingUtensilParser:
                 # Split on first '=' to handle values with '=' in them
                 if "=" in param_line:
                     key, value = param_line.split("=", 1)
-                    self.utensil_params[key.strip()] = value.strip()
+                    key = key.strip()
+                    value = value.strip()
+
+                    # Check if this is a multi-line value
+                    if value == "BEGIN_VALUE":
+                        self.state = ParserState.IN_MULTILINE_VALUE
+                        self.multiline_key = key
+                        self.multiline_lines = []
+                        logger.debug(f"Starting multi-line value for key: {key}")
+                    else:
+                        self.utensil_params[key] = value
 
             # Check for end marker
             elif line == "END_UTENSIL":
                 self.state = ParserState.COMPLETE
-                print(f"[PARSER] Transitioned to COMPLETE state")  # Debug
+                logger.debug("Transitioned to COMPLETE state")
 
             # Any other line in utensil context is ignored (or could be an error)
+
+        elif self.state == ParserState.IN_MULTILINE_VALUE:
+            self.utensil_text += original_line + "\n"
+
+            # Check for end of multi-line value
+            if line == "END_VALUE":
+                # Join accumulated lines and store as parameter
+                self.utensil_params[self.multiline_key] = "\n".join(self.multiline_lines)
+                logger.debug(f"Completed multi-line value for key: {self.multiline_key}")
+                self.multiline_key = None
+                self.multiline_lines = []
+                self.state = ParserState.IN_UTENSIL
+            else:
+                # Accumulate this line (preserve original whitespace for code)
+                self.multiline_lines.append(original_line)
 
     def has_utensil_call(self) -> bool:
         """
@@ -114,6 +165,8 @@ class StreamingUtensilParser:
         self.utensil_name = None
         self.utensil_params = {}
         self.utensil_text = ""
+        self.multiline_key = None
+        self.multiline_lines = []
 
         return result
 
