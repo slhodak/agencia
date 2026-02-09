@@ -1,5 +1,9 @@
 """Utensils (custom tool) definitions and implementations."""
 
+import ast
+import os
+import subprocess
+
 import os
 import subprocess
 
@@ -103,12 +107,74 @@ def edit_file(file_path: str, old_text: str, new_text: str) -> str:
         return f"Error editing file: {str(e)}"
 
 
+def validate_python(code: str = None, file_path: str = None) -> str:
+    """
+    Validate Python code for syntax correctness.
+
+    Can validate either provided code directly or read from a file.
+
+    Args:
+        code: Python code string to validate (optional)
+        file_path: Path to a Python file to validate (optional)
+
+    Returns:
+        Success message if syntax is valid, error message with details if invalid
+    """
+    try:
+        # Determine what to validate
+        if code is not None and file_path is not None:
+            return "Error: Provide either 'code' or 'file_path', not both"
+        
+        if code is None and file_path is None:
+            return "Error: Must provide either 'code' or 'file_path' parameter"
+
+        # Get the code to validate
+        if file_path:
+            if not file_path.endswith('.py'):
+                return f"Warning: File '{file_path}' does not have .py extension. Validating anyway..."
+            
+            try:
+                with open(file_path, 'r') as f:
+                    code_to_validate = f.read()
+                source_desc = f"file '{file_path}'"
+            except FileNotFoundError:
+                return f"Error: File not found at path '{file_path}'"
+            except PermissionError:
+                return f"Error: Permission denied reading file at '{file_path}'"
+            except Exception as e:
+                return f"Error reading file: {str(e)}"
+        else:
+            code_to_validate = code
+            source_desc = "provided code"
+
+        # Attempt to parse the code
+        try:
+            ast.parse(code_to_validate)
+            return f"✓ Python syntax is valid for {source_desc}"
+        except SyntaxError as e:
+            error_details = [
+                f"✗ Python syntax error in {source_desc}:",
+                f"  Line {e.lineno}: {e.msg}",
+            ]
+            if e.text:
+                error_details.append(f"  Code: {e.text.strip()}")
+                if e.offset:
+                    error_details.append(f"  {' ' * (e.offset + 7)}^")
+            return "\n".join(error_details)
+        except Exception as e:
+            return f"Error parsing Python code: {str(e)}"
+
+    except Exception as e:
+        return f"Error validating Python: {str(e)}"
+
+
 # Map utensil names to their implementation functions
 UTENSIL_FUNCTIONS = {
     "read_file": read_file,
     "write_file": write_file,
     "execute_command": execute_command,
     "edit_file": edit_file,
+    "validate_python": validate_python,
 }
 
 
@@ -146,6 +212,7 @@ Available utensils:
 - write_file: Write to a file (use for NEW files only). Parameters: file_path, content (use BEGIN_VALUE/END_VALUE for multi-line content)
 - edit_file: Edit an existing file by replacing text (PREFERRED for modifications). Parameters: file_path, old_text, new_text (use BEGIN_VALUE/END_VALUE for multi-line values)
 - execute_command: Run a bash command. Parameters: command
+- validate_python: Check if Python code is syntactically correct. Parameters: Either 'code' (string) OR 'file_path' (string), not both. Use BEGIN_VALUE/END_VALUE for multi-line code.
 
 IMPORTANT: Do NOT use Anthropic's tool use format. Use ONLY the format shown above.
 IMPORTANT: For multi-line content, you MUST use BEGIN_VALUE and END_VALUE.
@@ -186,16 +253,11 @@ PARAM:old_text=print("Hello!")
 PARAM:new_text=print("Hello, World!")
 END_UTENSIL
 
-Example - multi-line edit:
-User asks: "add error handling to the greet function"
-You respond:
-I'll add error handling to the function.
-
-UTENSIL:edit_file
-PARAM:file_path=greeting.py
-PARAM:old_text=BEGIN_VALUE
 def greet():
-    print("Hello, World!")
+    try:
+        print("Hello, World!")
+    except Exception as e:
+        print(f"Error: {e}")
 END_VALUE
 PARAM:new_text=BEGIN_VALUE
 def greet():
