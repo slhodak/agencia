@@ -149,8 +149,26 @@ def validate_python(code: str = None, file_path: str = None) -> str:
 
         # Attempt to parse the code
         try:
-            ast.parse(code_to_validate)
-            return f"✓ Python syntax is valid for {source_desc}"
+            parsed = ast.parse(code_to_validate)
+            
+            # Count lines and AST nodes for proof of validation
+            line_count = len(code_to_validate.splitlines())
+            node_count = sum(1 for _ in ast.walk(parsed))
+            
+            # Generate detailed success output
+            result = [
+                "=" * 60,
+                "✓ PYTHON SYNTAX VALIDATION SUCCESSFUL",
+                "=" * 60,
+                f"Source: {source_desc}",
+                f"Lines of code: {line_count}",
+                f"AST nodes parsed: {node_count}",
+                f"Validation timestamp: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                "=" * 60,
+                "No syntax errors detected. Code is syntactically valid.",
+                "=" * 60
+            ]
+            return "\n".join(result)
         except SyntaxError as e:
             error_details = [
                 f"✗ Python syntax error in {source_desc}:",
