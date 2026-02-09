@@ -176,9 +176,40 @@ The agent uses `claude-sonnet-4-5-20250929` by default. You can modify this in `
 ## Development
 
 ### Running Tests
+
+The project follows Python best practices with tests in a dedicated `tests/` directory.
+
+Run all tests:
 ```bash
-python test_streaming_parser.py
+pytest
 ```
+
+Run with verbose output:
+```bash
+pytest -v
+```
+
+Run a specific test file:
+```bash
+pytest tests/test_streaming_parser.py
+```
+
+Run with coverage report:
+```bash
+pytest --cov=. --cov-report=html
+```
+
+Run the color demonstration (not a unit test):
+```bash
+python tests/test_colors.py
+```
+
+### Test Structure
+- `tests/test_streaming_parser.py` - Unit tests for streaming parser
+- `tests/test_repl.py` - Integration tests for REPL functionality
+- `tests/test_colors.py` - Visual demonstration of color output
+- `tests/conftest.py` - Shared pytest configuration and fixtures
+- `pytest.ini` - Pytest configuration
 
 ### Debug Mode
 ```bash
