@@ -5,6 +5,7 @@ import os
 from anthropic import Anthropic
 from utensils import get_utensils_system_prompt, execute_utensil
 from streaming_parser import StreamingUtensilParser
+from colors import Colors
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ class Agent:
             {"role": "user", "content": user_prompt}
         ]
 
-        print(f"\n{'='*60}")
+        print(f"\n{Colors.separator('='*60)}")
         print(f"User: {user_prompt}")
         print(f"{'='*60}\n")
 
@@ -83,7 +84,8 @@ class Agent:
                 utensil_texts = [call["text"] for call in utensil_calls]
 
                 if assistant_text:
-                    full_response = assistant_text + "\n\n" + "\n\n".join(utensil_texts)
+                    full_response = assistant_text + \
+                        "\n\n" + "\n\n".join(utensil_texts)
                 else:
                     full_response = "\n\n".join(utensil_texts)
 
@@ -99,7 +101,8 @@ class Agent:
                     utensil_name = utensil_call["name"]
                     utensil_params = utensil_call["params"]
 
-                    print(f"Utensil Call: {utensil_name}")
+                    print(
+                        f"{Colors.utensil('🔧 Utensil Call:')} {Colors.BOLD}{utensil_name}{Colors.RESET}")
                     print(f"Parameters: {utensil_params}")
 
                     # Execute the utensil
