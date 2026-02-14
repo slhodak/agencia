@@ -64,6 +64,10 @@ class CommandHandler:
             return self._handle_clear()
         elif command_name == "help":
             return self._handle_help()
+        elif command_name == "models":
+            return self._handle_models()
+        elif command_name == "model":
+            return self._handle_model(arguments)
         else:
             print(f"\n❌ Unknown command: /{command_name}")
             print("Type /help to see available commands.\n")
@@ -143,8 +147,40 @@ Please respond with ONLY the summary, no preamble or explanation."""
         print("="*60)
         print("/compact  - Summarize conversation history to save tokens")
         print("/clear    - Erase conversation history and start fresh")
+        print("/models   - List available models")
+        print("/model    - Show or switch the current model")
         print("/help     - Display this help message")
         print("="*60 + "\n")
+        return True
+
+    def _handle_models(self) -> bool:
+        """List available models."""
+        models = self.agent.model_manager.list_available_models()
+        current = self.agent.model
+        print("\n" + "="*60)
+        print("📋 Available Models")
+        print("="*60)
+        for model_id, info in models.items():
+            marker = " ← current" if model_id == current else ""
+            print(f"  {model_id}")
+            print(f"    {info['display_name']} - {info['description']}{marker}")
+        print("="*60)
+        print("Use /model <id> to switch.\n")
+        return True
+
+    def _handle_model(self, arguments: list) -> bool:
+        """Switch to a specified model."""
+        if not arguments:
+            print(f"\n📋 Current model: {self.agent.model}")
+            print("Use /model <id> to switch or /models to list available models.\n")
+            return True
+
+        new_model = arguments[0]
+        if self.agent.switch_model(new_model):
+            print(f"\n✅ Switched to {new_model}\n")
+        else:
+            print(f"\n❌ Unknown model: {new_model}")
+            print("Use /models to see available models.\n")
         return True
 
     def _format_history_for_summary(self) -> str:

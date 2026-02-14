@@ -6,6 +6,7 @@ from anthropic import Anthropic
 from utensils import get_utensils_system_prompt, execute_utensil
 from streaming_parser import StreamingUtensilParser
 from colors import Colors
+from model_manager import ModelManager
 
 # Configure logger for this module
 logger = logging.getLogger(__name__)
@@ -28,7 +29,26 @@ class Agent:
 
         self.client = Anthropic(api_key=api_key)
         self.message_history = []
-        self.model = "claude-sonnet-4-5-20250929"
+        self.model_manager = ModelManager()
+        self.model = self.model_manager.get_current_model()
+
+        # Load system prompt at initialization so it's always available before user's first message
+        self.system_prompt = self._build_system_prompt()
+        logger.debug("System prompt loaded during agent initialization")
+
+    def _build_system_prompt(self) -> str:
+        """Build the full system prompt with orientation context and utensil instructions."""
+        cwd = os.getcwd()
+        utensil_prompt = get_utensils_system_prompt()
+        orientation = f"""You are an interactive coding agent. You help the user complete software engineering tasks.
+
+Current working directory: {cwd}
+Current model: {self.model}
+
+When you start a new conversation, briefly orient yourself by reading relevant files if the user's request requires understanding the project context.
+
+{utensil_prompt}"""
+        return orientation
 
     def run_with_utensils(self, user_prompt: str) -> str:
         """
@@ -43,13 +63,11 @@ class Agent:
         Returns:
             The final response from Claude
         """
-        # Build system prompt with utensil instructions
-        system_prompt = get_utensils_system_prompt()
-
-        # Initialize conversation with user prompt
-        self.message_history = [
+        # Add user prompt to conversation history
+        # System prompt is already loaded in __init__ and will be used for all messages
+        self.message_history.append(
             {"role": "user", "content": user_prompt}
-        ]
+        )
 
         print(f"\n{Colors.separator('='*60)}")
         print(f"User: {user_prompt}")
@@ -57,11 +75,11 @@ class Agent:
 
         # Agentic loop
         while True:
-            # Create streaming request
+            # Create streaming request using the pre-loaded system prompt
             with self.client.messages.stream(
                 model=self.model,
                 max_tokens=4096,
-                system=system_prompt,
+                system=self.system_prompt,
                 messages=self.message_history
             ) as stream:
                 # Initialize parser for this stream
@@ -127,6 +145,22 @@ class Agent:
 
             return final_response
 
+    def switch_model(self, new_model: str) -> bool:
+        """Switch to a different model.
+
+        Returns:
+            True if successful, False if model not found.
+        """
+        if self.model_manager.switch_model(new_model):
+            self.model = new_model
+            self.system_prompt = self._build_system_prompt()
+            return True
+        return False
+
     def reset(self):
-        """Clear the message history for a new conversation."""
+        """Clear the message history for a new conversation.
+
+        Note: The system prompt remains loaded and will be used for the next conversation.
+        """
         self.message_history = []
+        logger.debug("Message history cleared, system prompt preserved")

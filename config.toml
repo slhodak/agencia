@@ -1,0 +1,18 @@
+[model]
+name = "claude-sonnet-4-5-20250929"
+temperature = 1.0
+
+[models.claude-sonnet-4-5-20250929]
+display_name = "Claude Sonnet 4.5"
+max_tokens = 8192
+description = "Balanced performance and speed"
+
+[models.claude-haiku-4-5-20251001]
+display_name = "Claude Haiku 4.5"
+max_tokens = 8192
+description = "Fast and cost-effective"
+
+[models.claude-opus-4-6]
+display_name = "Claude Opus 4.6"
+max_tokens = 8192
+description = "Most capable, best for complex tasks"
